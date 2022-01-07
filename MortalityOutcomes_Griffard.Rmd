@@ -1,0 +1,454 @@
+---
+title: "MortalityOutcomes_Griffard"
+author: "Rachel Griffard"
+date: "10/19/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Libraries
+```{r}
+library(psych)
+library(maps)
+#library(worldmap) #not available for R version 4.0.2
+library(RColorBrewer)
+library(mice)
+library(tidyverse)
+library(plyr)
+library(dplyr)
+library(readxl)
+```
+
+Import Data
+```{r}
+#outcome variable
+outcome <- readr::read_csv("../data/outcome_permaturitydeath.csv")
+
+#established variables
+motherage <- readr::read_csv("../data/avgmotherage_Rready.csv")
+alcoholconsum <- readr::read_csv("../data/alcoholcomplete.csv")
+cigarettesmoking <- readr::read_csv("../data/cigarettesmoking.csv")
+
+#hypothesized variables
+GDP <- readr::read_csv("../data/healthcaremoney.csv")
+health_ledge <- readr::read_csv("../data/healthcaremoney.csv")
+familyplanning <- readr::read_csv("../data/familyplanningmet(allwomen).csv")
+contraceptive_any <- readr::read_csv("../data/contraceptive(any)(allwomen).csv")
+hightemp <- readr::read_csv("../data/averagetemp.csv")
+m_access <- readr::read_csv("../data/accesstoessentialmeds.csv")
+abort <- readr::read_csv("./data/GlobalAbortion.csv")
+abort_pol <- read_excel("./data/abortpol.xlsx")
+
+#Country codes
+country_codes <- readr::read_csv("../data/UNSD.csv")
+```
+
+
+Clean-Up Outcome Variable - Infant Mortality
+```{r}
+outcome$total2013 <- rep(NA)
+outcome$total2013 <- rowSums(outcome[,2:4])
+outcome$total2012 <- rep(NA)
+outcome$total2012 <- rowSums(outcome[,5:7])
+outcome$total2011 <- rep(NA)
+outcome$total2011 <- rowSums(outcome[,8:10])
+outcome$total2010 <- rep(NA)
+outcome$total2010 <- rowSums(outcome[,11:13])
+outcome$total2009 <- rep(NA)
+outcome$total2009 <- rowSums(outcome[,14:17])
+outcome$total2008 <- rep(NA)
+outcome$total2008 <- rowSums(outcome[,18:20])
+outcome$total2007 <- rep(NA)
+outcome$total2007 <- rowSums(outcome[,21:23])
+outcome <- data.frame(outcome$Country, outcome$total2013, outcome$total2012, outcome$total2011, outcome$total2010, outcome$total2009, outcome$total2008, outcome$total2007)
+outcome$mean2007_2013 <- rowMeans(outcome[,2:7])
+outcome <- data.frame(outcome$outcome.Country, outcome$mean2007_2013)
+```
+
+Clean-Up Established - Cigarette usage, alcohol usage, age of mother at birth
+```{r}
+cigarettesmoking$avg2007_2013 <- rep(NA)
+n <- 1
+coun <- 0
+while(n<265) {
+!is.na(cigarettesmoking$"2007"[n])  
+  if (!is.na(cigarettesmoking$"2007"[n]==F)) {
+    coun = coun + 1
+  }
+  else {
+  }
+  if (is.na(cigarettesmoking$"2008"[n]==F)) {
+    coun = coun + 1
+  }
+  else {}
+  if (is.na(cigarettesmoking$"2009"[n]==F)) {
+    coun = coun + 1
+  }
+  else{}
+  if (is.na(cigarettesmoking$"2010"[n]==F)) {
+    coun = coun + 1
+  }
+  else{}
+  if (is.na(cigarettesmoking$"2011"[n]==F)) {
+    coun = coun + 1
+  }
+  else{}
+  if (is.na(cigarettesmoking$"2012"[n]==F)) {
+    coun = coun + 1
+  }
+  else{}
+  if (coun >= 3) {
+    cigarettesmoking$avg2007_2013[n] <- (rowSums(cigarettesmoking[n, c(5, 6, 7, 8, 9, 10, 11)], na.rm=T))/coun
+  }
+  else {}
+  n = n+1
+  coun <- 0
+}
+cigarettesmoking <- data.frame(cigarettesmoking$"Country Name", cigarettesmoking$avg2007_2013)
+cigarettesmoking[cigarettesmoking==0] <- NA
+cigarettesmoking <- na.omit(cigarettesmoking)
+
+
+alcoholconsum$avg2007_2013 <- rep(NA)
+alcoholconsum$avg2007_2013 <- (rowSums(alcoholconsum[,c(4, 5, 6, 7, 8, 9, 10)], na.rm=T))/7
+n <- 1
+while(n<936) {
+  if(alcoholconsum$"Beverage Types"[n]!="All types") {
+    alcoholconsum$"Beverage Types"[n] <- NA
+  }
+  n=n+1
+}
+alcoholconsum <- na.omit(alcoholconsum)
+alcoholconsum <- data.frame(alcoholconsum$Country, alcoholconsum$avg2007_2013)
+
+
+motherage$sum2007_2013 <- rep(NA)
+motherage$sum2007_2013 <- rowSums(motherage[,c(2,3,4,5,6,7,8)], na.rm=T)
+motherage$avg2007_2013 <- rep(NA)
+n <- 1
+coun <- 0
+while (n<57) {
+  if (is.na(motherage$"2007"[n])==F) {
+    coun <- coun + 1
+  }
+  else{}
+  if (is.na(motherage$"2008"[n])==F) {
+    coun <- coun + 1
+  }
+  else{}
+  if (is.na(motherage$"2009"[n])==F) {
+    coun <- coun + 1
+  }
+  else{}
+  if (is.na(motherage$"2010"[n])==F) {
+    coun <- coun + 1
+  }
+  else{}
+  if (is.na(motherage$"2011"[n])==F) {
+    coun <- coun + 1
+  }
+  else {}
+  if (is.na(motherage$"2012"[n])==F) {
+    coun <- coun + 1
+  }
+  else {}
+  if (is.na(motherage$"2013"[n])==F) {
+    coun <- coun + 1
+  }
+  else{}
+  if (coun>=3) {
+    motherage$avg2007_2013[n] <- motherage$sum2007_2013[n]/coun
+  }
+  else{}
+  n = n + 1
+  coun <- 0
+}
+
+motherage <- data.frame(motherage$Country, motherage$avg2007_2013)
+```
+
+Clean-Up Hypothesized
+```{r}
+GDP <- subset(GDP, GDP$Period=="2013"|GDP$Period=="2012"|GDP$Period=="2011"|
+                       GDP$Period=="2010"|GDP$Period=="2009"|GDP$Period=="2008"|
+                       GDP$Period=="2007")
+GDP <- data.frame(GDP$Location, GDP$Period, GDP$Tooltip)
+GDP$Average2007_2013 <- rep(NA)
+
+#getting averages
+n <- 1
+while(n<1333) {
+  coun <- 0
+  avg <- 0
+  while(GDP$GDP.Location[n]==GDP$GDP.Location[n+1]){
+    coun=coun+1
+    n=n+1
+  }
+  print(coun)
+  if(coun>=4) {
+    coun_nonperm <- coun
+    n_nonperm <- n
+    while(coun_nonperm>0) {
+      avg = avg + GDP$GDP.Tooltip[n_nonperm]
+      n_nonperm = n_nonperm-1
+      coun_nonperm = coun_nonperm-1
+    }
+    avg = avg/coun
+    GDP$Average2007_2013[n-1] <- avg
+  }
+  else {
+    GDP$Average2007_2013[n] <- NA
+  }
+  n = n+1
+}
+
+#Zimbabwe
+z <- 7
+while(z>0) {
+  avg <- 0
+  avg = avg + GDP$GDP.Tooltip[1332+z]
+  z = z-1
+  GDP$Average2007_2013[1338] <- avg
+}
+#completing table
+GDP <- na.omit(GDP)
+GDP <- data.frame(GDP$GDP.Location, GDP$Average2007_2013)
+
+health_ledge <- subset(health_ledge, health_ledge$Period=="2013"|health_ledge$Period=="2012"|health_ledge$Period=="2011"|
+                      health_ledge$Period=="2010"|health_ledge$Period=="2009"|health_ledge$Period=="2008"|
+                        health_ledge$Period=="2007")
+dplyr::arrange(health_ledge, health_ledge$Location, desc(health_ledge$Period))
+health_ledge <- data.frame(health_ledge$Location, health_ledge$Period, health_ledge$Tooltip)
+health_ledge$Average2007_2013 <- rep(NA)
+#getting averages
+health_ledge$health_ledge.Tooltip <- as.numeric(as.character(health_ledge$health_ledge.Tooltip))
+n <- 1
+while(n<1298) {
+  coun <- 0
+  avg <- 0
+  while(health_ledge$health_ledge.Location[n]==health_ledge$health_ledge.Location[n+1]){
+    coun=coun+1
+    n=n+1
+  }
+  print(coun)
+  if(coun>=3) {
+    coun_nonperm <- coun
+    n_nonperm <- n
+    while(coun_nonperm>0) {
+      avg = avg + health_ledge$health_ledge.Tooltip[n_nonperm]
+      n_nonperm = n_nonperm-1
+      coun_nonperm = coun_nonperm-1
+    }
+    avg = avg/coun
+    health_ledge$Average2007_2013[n-1] <- avg
+  }
+  else {
+    health_ledge$Average2007_2013[n] <- NA
+  }
+  n = n+1
+}
+
+```
+
+
+```{r}
+#completing table
+health_ledge <- na.omit(health_ledge)
+health_ledge <- data.frame(health_ledge$health_ledge.Location, health_ledge$Average2007_2013)
+
+m_access <- data.frame(m_access$Location, m_access$Tooltip)
+
+coun <- 1
+while(coun < 24329) {
+  if(contraceptive_any$category[coun]!="All women") {
+    contraceptive_any$category[coun] <- rep(NA)
+  }
+  coun = coun+1
+}
+contraceptive_any <- na.omit(contraceptive_any)
+###average years together within countries
+contraceptive_any$averageyear <- rep(NA)
+n <- 1
+coun <- 1
+while(n<8121) {
+  if(contraceptive_any$timeLabel[n]==contraceptive_any$timeLabel[n+1]){
+    coun = coun + 1
+    n = n + 1
+    print(n,coun)
+  }
+  else {
+    coun_nonperm <- coun
+    n_nonperm <- n
+    avg <- 0
+    while(coun_nonperm>0) {
+      avg = avg + contraceptive_any$value[n_nonperm]
+      coun_nonperm = coun_nonperm-1
+      n_nonperm = n_nonperm-1
+    }
+    avg <- avg/coun
+    contraceptive_any$averageyear[n] <- avg
+    coun <- 1
+    n = n+1
+  }
+}
+
+contraceptive_any <- na.omit(contraceptive_any)
+contraceptive_any$averageyears <- rep(NA)
+
+n <- 1
+coun <- 1
+avg <- 0
+while(n<1622) {
+  if(contraceptive_any$locationId[n]==contraceptive_any$locationId[n+1]){
+    coun = coun + 1
+    n = n + 1
+  }
+  else {
+    coun_nonperm <- coun
+    n_nonperm <- n
+    avg <- 0
+    while(coun_nonperm>0) {
+      avg = avg + contraceptive_any$averageyear[n_nonperm]
+      coun_nonperm = coun_nonperm-1
+      n_nonperm = n_nonperm-1
+      print(avg)
+    }
+    avg <- avg/coun
+    contraceptive_any$averageyears[n] <- avg
+    coun <- 1
+    n = n+1
+  }
+}
+
+contraceptive_any <- na.omit(contraceptive_any)
+contraceptive_any <- data.frame(contraceptive_any$locationId, contraceptive_any$averageyears)
+
+n <- 1
+while (n<6114) {
+  if (hightemp$Year[n]!=2007 & hightemp$Year[n]!=2008 & hightemp$Year[n]!=2009 & hightemp$Year[n]!=2010 & hightemp$Year[n]!=2011 & hightemp$Year[n]!=2012 & hightemp$Year[n]!=2013) {
+    hightemp$Year[n] <- NA
+  }
+  n = n + 1
+}
+hightemp <- na.omit(hightemp)
+hightemp$hightemp <- rep(NA)
+n <- 1
+coun <- -10000
+while (n < 61152) {
+  coun <- -10000
+  while (hightemp$Country[n]==hightemp$Country[n+1]) {
+    if (hightemp$"Temperature - (Celsius)"[n]>coun) {
+      coun <- hightemp$"Temperature - (Celsius)"[n]
+    }
+    n = n+1
+  }
+  hightemp$hightemp[n] <- coun
+  n = n+1
+}
+hightemp <- na.omit(hightemp)
+hightemp <- data.frame(hightemp$Country, hightemp$hightemp)
+
+n <- 1
+while (n<3340) {
+  if (abort$yearstart[n]!=2007 & abort$yearstart[n]!=2008 & abort$yearstart[n]!=2009 & abort$yearstart[n]!=2010 & abort$yearstart[n]!=2011 & abort$yearstart[n]!=2012 & abort$yearstart[n]!=2013) {
+    abort$yearstart[n] <- NA
+  }
+  n = n + 1
+}
+abort <- data.frame(abort$country, abort$yearstart, abort$abortionrate)
+abort <- na.omit(abort)
+abort$average2007_2013 <- rep(NA)
+
+n <- 1
+coun <- 1
+while(n<70) {
+  if(abort$abort.country[n]==abort$abort.country[n+1]){
+    coun = coun + 1
+    n = n + 1
+    print(n,coun)
+  }
+  else {
+    if(coun>3) {
+    coun_nonperm <- coun
+    n_nonperm <- n
+    avg <- 0
+    while(coun_nonperm>0) {
+      avg = avg + abort$abort.abortionrate[n_nonperm]
+      coun_nonperm = coun_nonperm-1
+      n_nonperm = n_nonperm-1
+    }
+    avg <- avg/coun
+    abort$average2007_2013[n] <- avg
+    coun <- 1
+    }
+    n <- n+1
+  }
+}
+abort <- na.omit(abort)
+```
+
+
+Establish one variable name for countries through M49 code
+```{r}
+country_codes <- data.frame(country_codes$"Country or Area", country_codes$"M49 Code")
+names(country_codes)[names(country_codes) == "country_codes..M49.Code."] <- "code"
+names(contraceptive_any)[names(contraceptive_any) == "contraceptive_any.locationId"] <- "code"
+contraceptive_any <- merge(country_codes, contraceptive_any, by = "code", all=T)
+contraceptive_any <- data.frame(contraceptive_any$country_codes..Country.or.Area., contraceptive_any$averageyear)
+names(contraceptive_any)[names(contraceptive_any) == "contraceptive_any.country_codes..Country.or.Area."] <- "Country"
+names(contraceptive_any)[names(contraceptive_any) == "contraceptive_any.averageyear"] <- "Average Contraceptive Use"
+contraceptive_any <- na.omit(contraceptive_any)
+```
+
+
+Rename and reorganize naming of variables
+```{r}
+names(alcoholconsum)[names(alcoholconsum) == "alcoholconsum.Country"] <- "Country"
+names(alcoholconsum)[names(alcoholconsum) == "alcoholconsum.avg2007_2013"] <- "AverageAlcoholConsumption"
+names(motherage)[names(motherage) == "motherage.Country"] <- "Country"
+names(motherage)[names(motherage) == "motherage.avg2007_2013"] <- "AverageAgeofMotherBirth"
+names(cigarettesmoking)[names(cigarettesmoking) == "cigarettesmoking..Country.Name."] <- "Country"
+names(cigarettesmoking)[names(cigarettesmoking) == "cigarettesmoking.avg2007_2013"] <- "AvgCigaretteSmoking"
+names(GDP)[names(GDP) == "GDP.GDP.Location"] <- "Country"
+names(GDP)[names(GDP) == "GDP.Average2007_2013"] <- "CountryGDPSpentonHealthcare"
+names(health_ledge)[names(health_ledge) == "health_ledge.health_ledge.Location"] <- "Country"
+names(health_ledge)[names(health_ledge) == "health_ledge.Average2007_2013"] <- "HealthcareLegislation"
+names(contraceptive_any)[names(contraceptive_any) == "country_codes..Country.or.Area."] <- "Country"
+names(contraceptive_any)[names(contraceptive_any) == "contraceptive_any.averageyears"] <- "AccesstoANYContraceptiveMethod"
+names(outcome)[names(outcome) == "outcome.outcome.Country"] <- "Country"
+names(outcome)[names(outcome) == "outcome.mean2007_2013"] <- "Mortality"
+names(hightemp)[names(hightemp) == "hightemp.Country"] <- "Country"
+names(hightemp)[names(hightemp) == "hightemp.hightemp"] <- "HighTemperaturebyCountry"
+
+names(country_codes)[names(country_codes) == "country_codes..Country.or.Area."] <- "Country"
+names(country_codes)[names(country_codes) == "code"] <- "M49 Code"
+```
+
+
+Create full data set and standardized data set
+```{r}
+#identical(list(alcoholconsum, motherage, cigarettesmoking, GDP, health_ledge, contraceptive_any, outcome, hightemp, country_codes), complete)
+#setequal(list(alcoholconsum, motherage, cigarettesmoking, GDP, health_ledge, contraceptive_any, outcome, hightemp, country_codes), complete)
+full_dataset <- join_all(list(outcome, alcoholconsum, motherage, cigarettesmoking, GDP, health_ledge, contraceptive_any, hightemp), by="Country")
+full_dataset <- data.frame(full_dataset[,c(1,2,3,4,5,6,7,9,10)])
+std_dataset <- data.frame(full_dataset$Country, scale(full_dataset[,c(2,3,4,5,6,7,8)], center = T, scale = T))
+names(std_dataset)[names(std_dataset) == "full_dataset.Country"] <- "Country"
+```
+
+```{r}
+
+
+write_csv(full_dataset, "./data/Infant_Mortality.csv")
+
+write_csv(std_dataset, "./data/stzInfant_Mortality.csv")
+
+```
+
+
+
+
